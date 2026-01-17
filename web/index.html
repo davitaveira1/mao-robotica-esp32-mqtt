@@ -4,8 +4,454 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mão Robótica - Controle MQTT</title>
-    <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        /* Reset e Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #ffffff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 30px 0 20px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .badge-mqtt {
+            background: linear-gradient(135deg, #00d26a, #00a854);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            color: #8892a0;
+            font-size: 1rem;
+        }
+
+        /* Barra de Status de Conexão */
+        .connection-status {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ffa500;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-dot.connected {
+            background: #00d26a;
+            box-shadow: 0 0 12px rgba(0, 210, 106, 0.6);
+        }
+
+        .status-dot.disconnected {
+            background: #ff4757;
+            box-shadow: 0 0 12px rgba(255, 71, 87, 0.6);
+        }
+
+        .status-dot.connecting {
+            background: #ffa500;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+        }
+
+        #status-text {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* Card de Status do ESP32 */
+        .esp-status-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .esp-status-card.online {
+            border-color: rgba(0, 210, 106, 0.3);
+            background: rgba(0, 210, 106, 0.05);
+        }
+
+        .esp-status-card.offline {
+            border-color: rgba(255, 71, 87, 0.3);
+            background: rgba(255, 71, 87, 0.05);
+        }
+
+        .esp-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .esp-icon {
+            font-size: 1.5rem;
+        }
+
+        .esp-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .esp-info {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .esp-item {
+            display: flex;
+            gap: 10px;
+        }
+
+        .esp-item .label {
+            color: #8892a0;
+        }
+
+        .esp-item .value {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .esp-item .value.online {
+            color: #00d26a;
+        }
+
+        .esp-item .value.offline {
+            color: #ff4757;
+        }
+
+        /* Grid de Controles */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        /* Cards dos Servos */
+        .servo-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .servo-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .servo-card.active {
+            border-color: rgba(0, 210, 106, 0.5);
+            background: rgba(0, 210, 106, 0.08);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .finger-icon {
+            font-size: 1.8rem;
+        }
+
+        .card-header h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        /* Visual do Servo (Indicador de Ângulo) */
+        .servo-visual {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .servo-indicator {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #1e1e30, #2a2a40);
+            border: 3px solid #3a3a50;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .servo-needle {
+            width: 4px;
+            height: 30px;
+            background: linear-gradient(to top, #ff6b6b, #ffa500);
+            border-radius: 2px;
+            position: absolute;
+            bottom: 50%;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+            transition: transform 0.5s ease;
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+        }
+
+        .servo-indicator::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            z-index: 1;
+        }
+
+        /* Display do Ângulo */
+        .angle-display {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .angle-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .angle-unit {
+            font-size: 1.5rem;
+            color: #8892a0;
+        }
+
+        .gpio-info {
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+
+        /* Status do Card */
+        .card-status {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 18px;
+            font-size: 0.95rem;
+        }
+
+        .card-status span:first-child {
+            color: #8892a0;
+        }
+
+        .status-label {
+            font-weight: 700;
+            color: #ff4757;
+        }
+
+        .status-label.on {
+            color: #00d26a;
+        }
+
+        /* Botões do Card */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-on {
+            background: linear-gradient(135deg, #00d26a, #00a854);
+            color: white;
+        }
+
+        .btn-on:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(0, 210, 106, 0.4);
+        }
+
+        .btn-off {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: white;
+        }
+
+        .btn-off:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        /* Controles Gerais */
+        .general-controls {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 25px;
+        }
+
+        .general-controls h3 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .general-btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn-general {
+            padding: 16px 40px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-open-all {
+            background: linear-gradient(135deg, #00d26a, #00a854);
+            color: white;
+        }
+
+        .btn-open-all:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 210, 106, 0.4);
+        }
+
+        .btn-close-all {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: white;
+        }
+
+        .btn-close-all:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .controls-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+            }
+            
+            .servo-card {
+                padding: 20px;
+            }
+            
+            .btn-general {
+                padding: 14px 30px;
+                font-size: 1rem;
+            }
+            
+            .esp-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-content {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .general-btn-group {
+                flex-direction: column;
+            }
+            
+            .btn-general {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -50,7 +496,7 @@
                     <span class="finger-icon">👆</span>
                     <h3>Dedo 1</h3>
                 </div>
-                <div class="servo-visual" id="visual-servo1">
+                <div class="servo-visual">
                     <div class="servo-indicator">
                         <div class="servo-needle" id="needle-servo1"></div>
                     </div>
@@ -76,7 +522,7 @@
                     <span class="finger-icon">☝️</span>
                     <h3>Dedo 2</h3>
                 </div>
-                <div class="servo-visual" id="visual-servo2">
+                <div class="servo-visual">
                     <div class="servo-indicator">
                         <div class="servo-needle" id="needle-servo2"></div>
                     </div>
@@ -102,7 +548,7 @@
                     <span class="finger-icon">🖐️</span>
                     <h3>Dedo 3</h3>
                 </div>
-                <div class="servo-visual" id="visual-servo3">
+                <div class="servo-visual">
                     <div class="servo-indicator">
                         <div class="servo-needle" id="needle-servo3"></div>
                     </div>
@@ -128,7 +574,7 @@
                     <span class="finger-icon">💪</span>
                     <h3>Dedo 4</h3>
                 </div>
-                <div class="servo-visual" id="visual-servo4">
+                <div class="servo-visual">
                     <div class="servo-indicator">
                         <div class="servo-needle" id="needle-servo4"></div>
                     </div>
@@ -154,7 +600,7 @@
                     <span class="finger-icon">🤙</span>
                     <h3>Dedo 5</h3>
                 </div>
-                <div class="servo-visual" id="visual-servo5">
+                <div class="servo-visual">
                     <div class="servo-indicator">
                         <div class="servo-needle" id="needle-servo5"></div>
                     </div>
@@ -194,6 +640,232 @@
         </footer>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+        // ==================== CONFIGURAÇÕES MQTT ====================
+        const MQTT_BROKER = 'wss://broker.hivemq.com:8884/mqtt';
+        const MQTT_CLIENT_ID = 'web_mao_robotica_' + Math.random().toString(16).substr(2, 8);
+
+        // Tópicos MQTT
+        const TOPICS = {
+            servo1: 'mao_robotica/servo1',
+            servo2: 'mao_robotica/servo2',
+            servo3: 'mao_robotica/servo3',
+            servo4: 'mao_robotica/servo4',
+            servo5: 'mao_robotica/servo5',
+            todos: 'mao_robotica/todos',
+            status: 'mao_robotica/status',
+            heartbeat: 'mao_robotica/heartbeat'
+        };
+
+        // Ângulos dos servos
+        const ANGULOS = {
+            off: [0, 180, 0, 180, 180],
+            on: [180, 40, 180, 0, 0]
+        };
+
+        // Estado dos servos
+        let estadoServos = [0, 0, 0, 0, 0];
+
+        // Cliente MQTT
+        let client = null;
+
+        // Controle do ESP32
+        let espOnline = false;
+        let lastHeartbeat = null;
+        let heartbeatTimeout = null;
+
+        // ==================== CONEXÃO MQTT ====================
+        function conectarMQTT() {
+            atualizarStatusConexao('connecting', 'Conectando ao broker...');
+            
+            try {
+                const options = {
+                    clientId: MQTT_CLIENT_ID,
+                    clean: true,
+                    connectTimeout: 4000,
+                    reconnectPeriod: 2000,
+                };
+
+                client = mqtt.connect(MQTT_BROKER, options);
+
+                client.on('connect', () => {
+                    console.log('✅ Conectado ao broker MQTT!');
+                    atualizarStatusConexao('connected', 'Conectado ao broker MQTT');
+                    
+                    // Inscreve-se nos tópicos
+                    client.subscribe(TOPICS.status, (err) => {
+                        if (err) console.error('Erro ao inscrever em status:', err);
+                    });
+                    client.subscribe(TOPICS.heartbeat, (err) => {
+                        if (err) console.error('Erro ao inscrever em heartbeat:', err);
+                    });
+                    
+                    // Solicita status atual do ESP32
+                    client.publish('mao_robotica/request_status', '1');
+                });
+
+                client.on('error', (err) => {
+                    console.error('❌ Erro de conexão:', err);
+                    atualizarStatusConexao('disconnected', 'Erro de conexão: ' + err.message);
+                });
+
+                client.on('close', () => {
+                    console.log('🔌 Conexão fechada');
+                    atualizarStatusConexao('disconnected', 'Desconectado');
+                    atualizarStatusESP32(false);
+                });
+
+                client.on('reconnect', () => {
+                    console.log('🔄 Reconectando...');
+                    atualizarStatusConexao('connecting', 'Reconectando...');
+                });
+
+                client.on('message', (topic, message) => {
+                    const msg = message.toString();
+                    console.log(`📩 [${topic}]: ${msg}`);
+                    
+                    if (topic === TOPICS.status) {
+                        atualizarEstadosServos(msg);
+                        registrarHeartbeat();
+                    } else if (topic === TOPICS.heartbeat) {
+                        registrarHeartbeat();
+                    }
+                });
+            } catch (error) {
+                console.error('Erro ao conectar:', error);
+                atualizarStatusConexao('disconnected', 'Erro: ' + error.message);
+            }
+        }
+
+        // ==================== CONTROLE DO ESP32 ====================
+        function registrarHeartbeat() {
+            lastHeartbeat = new Date();
+            atualizarStatusESP32(true);
+            
+            if (heartbeatTimeout) {
+                clearTimeout(heartbeatTimeout);
+            }
+            
+            heartbeatTimeout = setTimeout(() => {
+                atualizarStatusESP32(false);
+            }, 10000);
+        }
+
+        function atualizarStatusESP32(online) {
+            espOnline = online;
+            const card = document.getElementById('esp-status-card');
+            const connectionText = document.getElementById('esp-connection');
+            const lastSeenText = document.getElementById('esp-last-seen');
+            
+            if (online) {
+                card.className = 'esp-status-card online';
+                connectionText.textContent = 'ONLINE';
+                connectionText.className = 'value online';
+                lastSeenText.textContent = 'Agora';
+            } else {
+                card.className = 'esp-status-card offline';
+                connectionText.textContent = 'OFFLINE';
+                connectionText.className = 'value offline';
+                
+                if (lastHeartbeat) {
+                    const diff = Math.round((new Date() - lastHeartbeat) / 1000);
+                    lastSeenText.textContent = `${diff}s atrás`;
+                } else {
+                    lastSeenText.textContent = 'Nunca conectado';
+                }
+            }
+        }
+
+        setInterval(() => {
+            if (!espOnline && lastHeartbeat) {
+                const diff = Math.round((new Date() - lastHeartbeat) / 1000);
+                document.getElementById('esp-last-seen').textContent = `${diff}s atrás`;
+            }
+        }, 1000);
+
+        // ==================== FUNÇÕES DE CONTROLE ====================
+        function toggleServo(servoNum, estado) {
+            if (!client || !client.connected) {
+                alert('❌ Não conectado ao broker MQTT!');
+                return;
+            }
+            
+            const topic = TOPICS[`servo${servoNum}`];
+            client.publish(topic, estado.toString());
+            console.log(`📤 Enviado: ${topic} = ${estado}`);
+            
+            estadoServos[servoNum - 1] = estado;
+            atualizarCardServo(servoNum, estado);
+        }
+
+        function controlarTodos(estado) {
+            if (!client || !client.connected) {
+                alert('❌ Não conectado ao broker MQTT!');
+                return;
+            }
+            
+            client.publish(TOPICS.todos, estado.toString());
+            console.log(`📤 Enviado: ${TOPICS.todos} = ${estado}`);
+            
+            for (let i = 1; i <= 5; i++) {
+                estadoServos[i - 1] = estado;
+                atualizarCardServo(i, estado);
+            }
+        }
+
+        // ==================== ATUALIZAÇÃO DA INTERFACE ====================
+        function atualizarStatusConexao(status, texto) {
+            const dot = document.getElementById('status-dot');
+            const textElement = document.getElementById('status-text');
+            
+            dot.className = 'status-dot ' + status;
+            textElement.textContent = texto;
+        }
+
+        function atualizarCardServo(servoNum, estado) {
+            const card = document.getElementById(`card-servo${servoNum}`);
+            const statusLabel = document.getElementById(`status-servo${servoNum}`);
+            const angleValue = document.getElementById(`angle-servo${servoNum}`);
+            const needle = document.getElementById(`needle-servo${servoNum}`);
+            
+            const angulo = estado === 1 ? ANGULOS.on[servoNum - 1] : ANGULOS.off[servoNum - 1];
+            
+            if (estado === 1) {
+                card.classList.add('active');
+                statusLabel.textContent = 'LIGADO';
+                statusLabel.classList.add('on');
+            } else {
+                card.classList.remove('active');
+                statusLabel.textContent = 'DESLIGADO';
+                statusLabel.classList.remove('on');
+            }
+            
+            angleValue.textContent = angulo;
+            
+            const rotacao = angulo - 90;
+            needle.style.transform = `rotate(${rotacao}deg)`;
+        }
+
+        function atualizarEstadosServos(statusString) {
+            const estados = statusString.split(',').map(Number);
+            
+            estados.forEach((estado, index) => {
+                const servoNum = index + 1;
+                estadoServos[index] = estado;
+                atualizarCardServo(servoNum, estado);
+            });
+        }
+
+        // ==================== INICIALIZAÇÃO ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Iniciando aplicação Mão Robótica...');
+            
+            for (let i = 1; i <= 5; i++) {
+                atualizarCardServo(i, 0);
+            }
+            
+            conectarMQTT();
+        });
+    </script>
 </body>
 </html>
