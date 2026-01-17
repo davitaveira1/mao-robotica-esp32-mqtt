@@ -31,6 +31,12 @@ const char* topic_servo4 = "mao_robotica/servo4";
 const char* topic_servo5 = "mao_robotica/servo5";
 const char* topic_todos = "mao_robotica/todos";
 const char* topic_status = "mao_robotica/status";
+const char* topic_heartbeat = "mao_robotica/heartbeat";
+const char* topic_request_status = "mao_robotica/request_status";
+
+// Intervalo do heartbeat (5 segundos)
+unsigned long lastHeartbeat = 0;
+const unsigned long heartbeatInterval = 5000;
 
 // ==================== CONFIGURAÇÃO DOS SERVOS ====================
 // Pinos GPIO
@@ -145,6 +151,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
     for (int i = 1; i <= 5; i++) {
       moverServo(i, estado);
     }
+  } else if (String(topic) == topic_request_status) {
+    // Responde com status atual quando solicitado
+    Serial.println("Status solicitado pela interface web");
   }
   
   // Publica status atualizado
@@ -174,6 +183,7 @@ void reconnect() {
       client.subscribe(topic_servo4);
       client.subscribe(topic_servo5);
       client.subscribe(topic_todos);
+      client.subscribe(topic_request_status);
       
       Serial.println("Inscrito nos tópicos MQTT");
       
@@ -237,4 +247,12 @@ void loop() {
     reconnect();
   }
   client.loop();
+  
+  // Envia heartbeat a cada 5 segundos
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastHeartbeat >= heartbeatInterval) {
+    lastHeartbeat = currentMillis;
+    client.publish(topic_heartbeat, "1");
+    Serial.println("💓 Heartbeat enviado");
+  }
 }

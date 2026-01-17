@@ -3,107 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle Mão Robótica</title>
+    <title>Mão Robótica - Controle MQTT</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Biblioteca MQTT.js via CDN -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <header>
-            <h1>🤖 Mão Robótica</h1>
-            <p class="subtitle">Controle de Servos via MQTT</p>
-            <div class="status-container">
-                <span id="status-indicator" class="status-indicator disconnected"></span>
-                <span id="status-text">Desconectado</span>
+            <div class="header-content">
+                <h1>🤖 Mão Robótica</h1>
+                <span class="badge-mqtt">MQTT</span>
             </div>
+            <p class="subtitle">Monitoramento e controle em tempo real</p>
         </header>
 
-        <main>
-            <div class="controls-grid">
-                <!-- Servo 1 - Polegar -->
-                <div class="servo-card" id="card-servo1">
-                    <div class="servo-icon">👆</div>
+        <!-- Status de Conexão -->
+        <div class="connection-status" id="connection-bar">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">Conectando...</span>
+        </div>
+
+        <!-- Status do ESP32 -->
+        <div class="esp-status-card" id="esp-status-card">
+            <div class="esp-header">
+                <span class="esp-icon">📡</span>
+                <h3>Status do ESP32</h3>
+            </div>
+            <div class="esp-info">
+                <div class="esp-item">
+                    <span class="label">Conexão:</span>
+                    <span class="value" id="esp-connection">Aguardando...</span>
+                </div>
+                <div class="esp-item">
+                    <span class="label">Último sinal:</span>
+                    <span class="value" id="esp-last-seen">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid de Controles dos Servos -->
+        <div class="controls-grid">
+            <!-- Servo 1 -->
+            <div class="servo-card" id="card-servo1">
+                <div class="card-header">
+                    <span class="finger-icon">👆</span>
                     <h3>Dedo 1</h3>
-                    <p class="servo-info">Servo 1 (GPIO 15)</p>
-                    <p class="angle-info" id="angle-servo1">Ângulo: 0°</p>
-                    <label class="switch">
-                        <input type="checkbox" id="servo1" onchange="toggleServo(1)">
-                        <span class="slider"></span>
-                    </label>
-                    <p class="status-text" id="status-servo1">Desabilitado</p>
                 </div>
-
-                <!-- Servo 2 - Indicador -->
-                <div class="servo-card" id="card-servo2">
-                    <div class="servo-icon">☝️</div>
-                    <h3>Dedo 2</h3>
-                    <p class="servo-info">Servo 2 (GPIO 18)</p>
-                    <p class="angle-info" id="angle-servo2">Ângulo: 180°</p>
-                    <label class="switch">
-                        <input type="checkbox" id="servo2" onchange="toggleServo(2)">
-                        <span class="slider"></span>
-                    </label>
-                    <p class="status-text" id="status-servo2">Desabilitado</p>
+                <div class="servo-visual" id="visual-servo1">
+                    <div class="servo-indicator">
+                        <div class="servo-needle" id="needle-servo1"></div>
+                    </div>
                 </div>
-
-                <!-- Servo 3 - Médio -->
-                <div class="servo-card" id="card-servo3">
-                    <div class="servo-icon">🖕</div>
-                    <h3>Dedo 3</h3>
-                    <p class="servo-info">Servo 3 (GPIO 19)</p>
-                    <p class="angle-info" id="angle-servo3">Ângulo: 0°</p>
-                    <label class="switch">
-                        <input type="checkbox" id="servo3" onchange="toggleServo(3)">
-                        <span class="slider"></span>
-                    </label>
-                    <p class="status-text" id="status-servo3">Desabilitado</p>
+                <div class="angle-display">
+                    <span class="angle-value" id="angle-servo1">0</span>
+                    <span class="angle-unit">°</span>
                 </div>
-
-                <!-- Servo 4 - Anelar -->
-                <div class="servo-card" id="card-servo4">
-                    <div class="servo-icon">💍</div>
-                    <h3>Dedo 4</h3>
-                    <p class="servo-info">Servo 4 (GPIO 22)</p>
-                    <p class="angle-info" id="angle-servo4">Ângulo: 180°</p>
-                    <label class="switch">
-                        <input type="checkbox" id="servo4" onchange="toggleServo(4)">
-                        <span class="slider"></span>
-                    </label>
-                    <p class="status-text" id="status-servo4">Desabilitado</p>
+                <p class="gpio-info">GPIO 15</p>
+                <div class="card-status">
+                    <span>Status:</span>
+                    <span class="status-label" id="status-servo1">DESLIGADO</span>
                 </div>
-
-                <!-- Servo 5 - Mínimo -->
-                <div class="servo-card" id="card-servo5">
-                    <div class="servo-icon">🤙</div>
-                    <h3>Dedo 5</h3>
-                    <p class="servo-info">Servo 5 (GPIO 23)</p>
-                    <p class="angle-info" id="angle-servo5">Ângulo: 180°</p>
-                    <label class="switch">
-                        <input type="checkbox" id="servo5" onchange="toggleServo(5)">
-                        <span class="slider"></span>
-                    </label>
-                    <p class="status-text" id="status-servo5">Desabilitado</p>
-                </div>
-            </div>
-
-            <!-- Controles Gerais -->
-            <div class="general-controls">
-                <h3>Controles Gerais</h3>
                 <div class="btn-group">
-                    <button class="btn btn-open" onclick="controlarTodos(1)">
-                        ✋ Abrir Mão
-                    </button>
-                    <button class="btn btn-close" onclick="controlarTodos(0)">
-                        ✊ Fechar Mão
-                    </button>
+                    <button class="btn btn-on" onclick="toggleServo(1, 1)">Ligar</button>
+                    <button class="btn btn-off" onclick="toggleServo(1, 0)">Desligar</button>
                 </div>
             </div>
-        </main>
 
+            <!-- Servo 2 -->
+            <div class="servo-card" id="card-servo2">
+                <div class="card-header">
+                    <span class="finger-icon">☝️</span>
+                    <h3>Dedo 2</h3>
+                </div>
+                <div class="servo-visual" id="visual-servo2">
+                    <div class="servo-indicator">
+                        <div class="servo-needle" id="needle-servo2"></div>
+                    </div>
+                </div>
+                <div class="angle-display">
+                    <span class="angle-value" id="angle-servo2">180</span>
+                    <span class="angle-unit">°</span>
+                </div>
+                <p class="gpio-info">GPIO 18</p>
+                <div class="card-status">
+                    <span>Status:</span>
+                    <span class="status-label" id="status-servo2">DESLIGADO</span>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-on" onclick="toggleServo(2, 1)">Ligar</button>
+                    <button class="btn btn-off" onclick="toggleServo(2, 0)">Desligar</button>
+                </div>
+            </div>
+
+            <!-- Servo 3 -->
+            <div class="servo-card" id="card-servo3">
+                <div class="card-header">
+                    <span class="finger-icon">🖐️</span>
+                    <h3>Dedo 3</h3>
+                </div>
+                <div class="servo-visual" id="visual-servo3">
+                    <div class="servo-indicator">
+                        <div class="servo-needle" id="needle-servo3"></div>
+                    </div>
+                </div>
+                <div class="angle-display">
+                    <span class="angle-value" id="angle-servo3">0</span>
+                    <span class="angle-unit">°</span>
+                </div>
+                <p class="gpio-info">GPIO 19</p>
+                <div class="card-status">
+                    <span>Status:</span>
+                    <span class="status-label" id="status-servo3">DESLIGADO</span>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-on" onclick="toggleServo(3, 1)">Ligar</button>
+                    <button class="btn btn-off" onclick="toggleServo(3, 0)">Desligar</button>
+                </div>
+            </div>
+
+            <!-- Servo 4 -->
+            <div class="servo-card" id="card-servo4">
+                <div class="card-header">
+                    <span class="finger-icon">💪</span>
+                    <h3>Dedo 4</h3>
+                </div>
+                <div class="servo-visual" id="visual-servo4">
+                    <div class="servo-indicator">
+                        <div class="servo-needle" id="needle-servo4"></div>
+                    </div>
+                </div>
+                <div class="angle-display">
+                    <span class="angle-value" id="angle-servo4">180</span>
+                    <span class="angle-unit">°</span>
+                </div>
+                <p class="gpio-info">GPIO 22</p>
+                <div class="card-status">
+                    <span>Status:</span>
+                    <span class="status-label" id="status-servo4">DESLIGADO</span>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-on" onclick="toggleServo(4, 1)">Ligar</button>
+                    <button class="btn btn-off" onclick="toggleServo(4, 0)">Desligar</button>
+                </div>
+            </div>
+
+            <!-- Servo 5 -->
+            <div class="servo-card" id="card-servo5">
+                <div class="card-header">
+                    <span class="finger-icon">🤙</span>
+                    <h3>Dedo 5</h3>
+                </div>
+                <div class="servo-visual" id="visual-servo5">
+                    <div class="servo-indicator">
+                        <div class="servo-needle" id="needle-servo5"></div>
+                    </div>
+                </div>
+                <div class="angle-display">
+                    <span class="angle-value" id="angle-servo5">180</span>
+                    <span class="angle-unit">°</span>
+                </div>
+                <p class="gpio-info">GPIO 23</p>
+                <div class="card-status">
+                    <span>Status:</span>
+                    <span class="status-label" id="status-servo5">DESLIGADO</span>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-on" onclick="toggleServo(5, 1)">Ligar</button>
+                    <button class="btn btn-off" onclick="toggleServo(5, 0)">Desligar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controles Gerais -->
+        <div class="general-controls">
+            <h3>⚡ Controles Rápidos</h3>
+            <div class="general-btn-group">
+                <button class="btn-general btn-open-all" onclick="controlarTodos(1)">
+                    ✋ Abrir Mão
+                </button>
+                <button class="btn-general btn-close-all" onclick="controlarTodos(0)">
+                    ✊ Fechar Mão
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
         <footer>
             <p>GO LabMaker - IFG Câmpus Goiânia Oeste</p>
-            <p class="broker-info">Broker: <span id="broker-address">broker.hivemq.com</span></p>
         </footer>
     </div>
 
