@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Mão Robótica</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Biblioteca MQTT.js via CDN -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Mão Robótica</h1>
+            <p class="subtitle">Controle de Servos via MQTT</p>
+            <div class="status-container">
+                <span id="status-indicator" class="status-indicator disconnected"></span>
+                <span id="status-text">Desconectado</span>
+            </div>
+        </header>
+
+        <main>
+            <div class="controls-grid">
+                <!-- Servo 1 - Polegar -->
+                <div class="servo-card" id="card-servo1">
+                    <div class="servo-icon">👆</div>
+                    <h3>Dedo 1</h3>
+                    <p class="servo-info">Servo 1 (GPIO 15)</p>
+                    <p class="angle-info" id="angle-servo1">Ângulo: 0°</p>
+                    <label class="switch">
+                        <input type="checkbox" id="servo1" onchange="toggleServo(1)">
+                        <span class="slider"></span>
+                    </label>
+                    <p class="status-text" id="status-servo1">Desabilitado</p>
+                </div>
+
+                <!-- Servo 2 - Indicador -->
+                <div class="servo-card" id="card-servo2">
+                    <div class="servo-icon">☝️</div>
+                    <h3>Dedo 2</h3>
+                    <p class="servo-info">Servo 2 (GPIO 18)</p>
+                    <p class="angle-info" id="angle-servo2">Ângulo: 180°</p>
+                    <label class="switch">
+                        <input type="checkbox" id="servo2" onchange="toggleServo(2)">
+                        <span class="slider"></span>
+                    </label>
+                    <p class="status-text" id="status-servo2">Desabilitado</p>
+                </div>
+
+                <!-- Servo 3 - Médio -->
+                <div class="servo-card" id="card-servo3">
+                    <div class="servo-icon">🖕</div>
+                    <h3>Dedo 3</h3>
+                    <p class="servo-info">Servo 3 (GPIO 19)</p>
+                    <p class="angle-info" id="angle-servo3">Ângulo: 0°</p>
+                    <label class="switch">
+                        <input type="checkbox" id="servo3" onchange="toggleServo(3)">
+                        <span class="slider"></span>
+                    </label>
+                    <p class="status-text" id="status-servo3">Desabilitado</p>
+                </div>
+
+                <!-- Servo 4 - Anelar -->
+                <div class="servo-card" id="card-servo4">
+                    <div class="servo-icon">💍</div>
+                    <h3>Dedo 4</h3>
+                    <p class="servo-info">Servo 4 (GPIO 22)</p>
+                    <p class="angle-info" id="angle-servo4">Ângulo: 180°</p>
+                    <label class="switch">
+                        <input type="checkbox" id="servo4" onchange="toggleServo(4)">
+                        <span class="slider"></span>
+                    </label>
+                    <p class="status-text" id="status-servo4">Desabilitado</p>
+                </div>
+
+                <!-- Servo 5 - Mínimo -->
+                <div class="servo-card" id="card-servo5">
+                    <div class="servo-icon">🤙</div>
+                    <h3>Dedo 5</h3>
+                    <p class="servo-info">Servo 5 (GPIO 23)</p>
+                    <p class="angle-info" id="angle-servo5">Ângulo: 180°</p>
+                    <label class="switch">
+                        <input type="checkbox" id="servo5" onchange="toggleServo(5)">
+                        <span class="slider"></span>
+                    </label>
+                    <p class="status-text" id="status-servo5">Desabilitado</p>
+                </div>
+            </div>
+
+            <!-- Controles Gerais -->
+            <div class="general-controls">
+                <h3>Controles Gerais</h3>
+                <div class="btn-group">
+                    <button class="btn btn-open" onclick="controlarTodos(1)">
+                        ✋ Abrir Mão
+                    </button>
+                    <button class="btn btn-close" onclick="controlarTodos(0)">
+                        ✊ Fechar Mão
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>GO LabMaker - IFG Câmpus Goiânia Oeste</p>
+            <p class="broker-info">Broker: <span id="broker-address">broker.hivemq.com</span></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

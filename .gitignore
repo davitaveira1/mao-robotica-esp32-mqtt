@@ -1,0 +1,15 @@
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# IDEs e editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Arquivos de build do Arduino
+*.elf
+*.bin
+*.hex
+build/
